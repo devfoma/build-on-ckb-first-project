@@ -4,7 +4,7 @@ This document presents a comprehensive technical reflection on the architectural
 
 ---
 
-## 🏗️ Architectural Overview & Design Decisions
+## Architectural Overview & Design Decisions
 
 ### 1. Smart Contract Runtime (`ckb_js_vm`)
 Rather than compiling Rust/C contracts to RISC-V binary execution layers, we opted for **JavaScript execution on-chain** using CKB's native `ckb_js_vm`.
@@ -17,14 +17,14 @@ We integrated CKB's Common Connector (`@ckb-ccc/connector-react`) to interface w
 
 ---
 
-## 🛠️ Challenges & Key Troubleshooting Phases
+## Challenges & Key Troubleshooting Phases
 
-### 🛠️ Phase 1: Transaction Fee Rejection (`PoolRejectedTransactionByMinFeeRate`)
+### Phase 1: Transaction Fee Rejection (`PoolRejectedTransactionByMinFeeRate`)
 * **Problem**: When deploying or locking funds via JoyID (Passkey), transactions failed with a CKB node pool rejection: `The min fee rate is 1000 shannons/KW, requiring a transaction fee of at least 22146 shannons, but the fee provided is only 21586`.
 * **Investigation**: WebAuthn cryptographic assertions (signatures) are significantly larger than standard Secp256k1 cryptographic signatures. Standard fee estimation calculations at `1000 shannons/KW` happen *pre-signing* and underestimate the final post-signed transaction size.
 * **Resolution**: Updated all transaction fee estimation helper functions (`completeFeeBy(signer, 2000)`) in both the frontend components and core backend utilities to use `2000 shannons/KW`, successfully accommodating the larger passkey signatures.
 
-### 🛠️ Phase 2: Dynamic Import Query Bypassing in Vite
+### Phase 2: Dynamic Import Query Bypassing in Vite
 * **Problem**: In the event handler for contract deployment, dynamic imports with raw file loaders (e.g. `await import("./deployment/hash-lock.js?raw")`) failed or returned `undefined` for `.default` under the Vite development server.
 * **Investigation**: Vite's bundler only analyzes static query suffixes during build analysis. Runtime dynamic imports do not evaluate raw query suffixes (`?raw`) correctly and treat them as module loaders.
 * **Resolution**: Replaced the dynamic runtime loader with a static, module-level raw import:
@@ -32,7 +32,7 @@ We integrated CKB's Common Connector (`@ckb-ccc/connector-react`) to interface w
   import hashLockContractCode from "./deployment/hash-lock.js?raw";
   ```
 
-### 🛠️ Phase 3: Hex Prefix Injection & React Render Crashing
+### Phase 3: Hex Prefix Injection & React Render Crashing
 * **Problem**: The app interface loaded correctly initially but went completely blank/black immediately upon contract deployment or page refresh.
 * **Investigation**: 
   - Checked development server error logs and found a critical client runtime trace: `Error: Invalid bytes 0x0000...0x...`.
@@ -48,7 +48,7 @@ We integrated CKB's Common Connector (`@ckb-ccc/connector-react`) to interface w
 
 ---
 
-## 📈 Key Takeaways
+## Key Takeaways
 
 1. **Strict Input Sanitization on Hex Strings**: Cryptographic libraries like `@ckb-ccc/core` expect clean, normalized hexadecimal formats. Double `0x` injection or missing prefixes can silently pass TypeScript compilation but trigger immediate runtime failures.
 2. **React Render Safety**: Always isolate component state parsing from the main execution tree. Using optional chaining and validating keys before setting boolean render states (like `isContractLoaded`) prevents UI blankouts.
