@@ -1,55 +1,92 @@
-# My CKB Hash-Lock Smart Contract & DApp Portal Journey
+# My CKB Store Data on Cell: On-Chain Message Storage Process
 
-This document presents my comprehensive technical reflection on the architectural decisions, challenges, and debugging sessions I encountered while onboarding to CKB (Nervos Network) and building my premium React Hash-Lock smart contract portal.
+Documented by: Maduegbunam Faith Amarachi (Devfoma)
 
----
 
-## Architectural Overview & Design Decisions
+I chose to complete this Store Data on Cell campaign using a custom automated Node script integrated with CKB's native CLI wrapper and developer network (offckb) because:
 
-### 1. Smart Contract Runtime (`ckb_js_vm`)
-Rather than compiling Rust/C contracts to RISC-V binary execution layers, I opted for **JavaScript execution on-chain** using CKB's native `ckb_js_vm`.
-- **My Rationale**: It reduces my local toolchain complexity (avoiding heavy Rust/C RISC-V compiler installations on Windows). Raw JavaScript contract code is directly loaded into cell data and executed on-chain, which lowered my barrier to entry.
-- **Contract Logic**: My Hash-Lock contract enforces that the transaction witness preimage (retrieved from the lock script arguments offset by 35 bytes) hashes via Blake2b-256 to match the expected hash.
+1. **Local Network Control**: Running my own private node via `offckb` allows me to inspect cell capacities and balance modifications instantly in a controlled sandbox without relying on public testnet latency.
+2. **Direct API Integration**: Constructing and executing transactions programmatically using the `@ckb-ccc/core` client library gives me full visibility into fee estimation, UTXO cell inputs, and raw witness structures.
+3. **Precise Verification**: Querying the devnet blockchain directly using the cell's transaction hash and output index ensures absolute, tamper-proof verification that my message was written on-chain.
 
-### 2. Browser-Native Biometrics (WebAuthn / Passkeys)
-I integrated CKB's Common Connector (`@ckb-ccc/connector-react`) to interface with browser-native biometric wallets (JoyID).
-- **My Rationale**: It removes the requirement of exporting or handling private keys in my browser. I can sign the contract deployment and funding transactions using my native device authentication (Windows Hello, TouchID, FaceID).
 
----
 
-## Challenges & Key Troubleshooting Phases
 
-### Phase 1: Transaction Fee Rejection (`PoolRejectedTransactionByMinFeeRate`)
-* **My Problem**: When I tried deploying or locking funds via JoyID (Passkey), my transactions failed with a CKB node pool rejection: `The min fee rate is 1000 shannons/KW, requiring a transaction fee of at least 22146 shannons, but the fee provided is only 21586`.
-* **My Investigation**: I realized that WebAuthn cryptographic assertions (signatures) are significantly larger than standard Secp256k1 cryptographic signatures. Standard fee estimation calculations at `1000 shannons/KW` happen *pre-signing* and underestimate the final post-signed transaction size.
-* **My Resolution**: I updated all transaction fee estimation helper functions (`completeFeeBy(signer, 2000)`) in both my frontend components and core utilities to use `2000 shannons/KW`, which successfully accommodated my passkey signatures.
 
-### Phase 2: Dynamic Import Query Bypassing in Vite
-* **My Problem**: In the event handler for contract deployment, dynamic imports with raw file loaders (e.g. `await import("./deployment/hash-lock.js?raw")`) failed or returned `undefined` for `.default` under the Vite development server.
-* **My Investigation**: I discovered that Vite's bundler only analyzes static query suffixes during build analysis. Runtime dynamic imports do not evaluate raw query suffixes (`?raw`) correctly and treat them as module loaders.
-* **My Resolution**: I replaced the dynamic runtime loader with a static, module-level raw import:
-  ```typescript
-  import hashLockContractCode from "./deployment/hash-lock.js?raw";
-  ```
 
-### Phase 3: Hex Prefix Injection & React Render Crashing
-* **My Problem**: My app interface loaded correctly initially but went completely blank/black immediately upon contract deployment or page refresh.
-* **My Investigation**: 
-  - I checked my development server error logs and found a critical client runtime trace: `Error: Invalid bytes 0x0000...0x...`.
-  - I analyzed the hex string structure and discovered that the preimage hash was stored in `localStorage` starting with `0x`.
-  - When my utility constructed the script arguments (`"0x0000" + contractCodeHash.slice(2) + hashTypeByte + preimageHash`), it double-injected `0x` in the middle of the byte sequence (e.g. `...000xcb6c...`).
-  - Upon calling `ccc.Script.from(lockScript)` in `generateHashLockAccount` (inside a `useEffect`), the script parser threw an invalid byte error. Since this uncaught error occurred during the render/mount phase, React unmounted the entire component tree, causing a blank screen.
-* **My Resolution**: I added strict input sanitization to `generateHashLockAccount` in `src/lib.ts`:
-  ```typescript
-  const cleanCodeHash = contractCodeHash.startsWith("0x") ? contractCodeHash.slice(2) : contractCodeHash;
-  const cleanHash = hash.startsWith("0x") ? hash.slice(2) : hash;
-  ```
-  Additionally, I added robust optional chaining (`contractScripts?.codeHash`) to the render layout to prevent any potential render-phase crashes.
 
----
 
-## Key Takeaways
 
-1. **Strict Input Sanitization on Hex Strings**: Cryptographic libraries like `@ckb-ccc/core` expect clean, normalized hexadecimal formats. Double `0x` injection or missing prefixes can silently pass TypeScript compilation but trigger immediate runtime failures.
-2. **React Render Safety**: I learned to always isolate component state parsing from the main execution tree. Using optional chaining and validating keys before setting boolean render states (like `isContractLoaded`) prevents UI blankouts.
-3. **Passkey Signature Size Variations**: When building on CKB or other UTXO chains, I must account for signature size variances. Dynamic signature sizes (like WebAuthn) require safe margins for fee calculation rates.
+
+
+
+
+### Step 1: Bootstrap the Local Devnet
+I did this following the first step of the documentation to spin up a local network. I ran `offckb.cmd node` in my workspace root. The CLI wrapper downloaded and installed the CKB binary version 0.205.0 and successfully launched my devnet node and miner, exposing the RPC proxy at `http://127.0.0.1:28114`.
+My Action: I started the local node in the background and verified it began producing blocks.
+
+
+
+
+
+
+
+
+### Step 2: Retrieve Funded Developer Accounts
+I did this following the documentation's account setup guide. I ran `offckb.cmd accounts` to output the list of pre-funded accounts generated in the devnet genesis block.
+My Action: I extracted the private key for Account #1 (`0x9f315d5a9618a39fdc487c7a67a8581d40b045bd7a42d83648ca80ef3b2cb4a1`) and verified that it held a balance of `42,000,000 CKB`.
+
+
+
+
+
+
+
+
+### Step 3: Setup Node Client and Register Devnet Script Hashes
+I did this following the client setup guidelines in the documentation. I copied `system-scripts.json` containing the script configurations and loaded them into my test script.
+My Action: I instantiated the `ClientPublicTestnet` with my local proxy URL and configured the `SignerCkbPrivateKey` using the funded private key from Step 2.
+
+
+
+
+
+
+
+
+### Step 4: Encode the UTF-8 Message to Hexadecimal
+I did this following the message encoding instructions. I wrote a utility function `utf8ToHex` using the `TextEncoder` API to convert my plain text message into a hex payload.
+My Action: I encoded the message `"Hello CKB, Store Data on Cell Campaign Completed successfully!"` into the hexadecimal string: `0x48656c6c6f20434b422c2053746f72652044617461206f6e2043656c6c2043616d706169676e20436f6d706c65746564207375636365737366756c6c7921`.
+
+
+
+
+
+
+
+
+
+
+### Step 5: Build the Transaction with Cell Data
+I did this following the transaction building specifications. I constructed the transaction output cell using `@ckb-ccc/core`.
+My Action: I set the lock script of my output cell to the signer's script, loaded the encoded hex message into the output data, completed the inputs based on my signer's capacity, and completed the fee estimation at a rate of 1000 shannons/KW.
+
+
+
+
+
+
+
+### Step 6: Sign and Broadcast to the Network
+I did this following the signature and broadcast instructions. I used my local private key signer to sign the transaction payload and push it to the node.
+My Action: I executed `signer.sendTransaction(tx)`, generating the transaction hash `0x522bc4c6d7c83b173483f0008d246ccf76d6c25ac975b298f03d41b0aed18768`, and waited for confirmation.
+
+
+
+
+
+
+
+### Step 7: Retrieve and Decode Live Cell Data
+I did this following the reading data instructions to query my saved cell data from the blockchain.
+My Action: I fetched the live cell at index `0x0` using the transaction hash from Step 6. I retrieved the raw hex payload `0x48656c...`, decoded it back to UTF-8 using `TextDecoder`, and confirmed that the retrieved message matched my original input string.
