@@ -4,7 +4,7 @@ Below are the logged outputs proving the successful completion of the "Store Dat
 
 ---
 
-## 📋 Execution Log Output
+## Execution Log Output
 
 ```text
 === CKB STORE DATA ON CELL TUTORIAL RUN ===
@@ -39,20 +39,20 @@ Below are the logged outputs proving the successful completion of the "Store Dat
 
 ---
 
-## 🧠 Reflection of My Learning Process
+## Reflection of My Learning Process
 
-Completing this campaign deepened my understanding of the CKB core principles and UTXO structure:
+Completing this campaign deepened my understanding of CKB's core principles and UTXO structure:
 
 ### 1. The Power of the Generalized Cell Model
-Unlike Ethereum or EVM chains where data is stored in account storage slots mapped behind smart contracts, CKB stores data in first-class **Cells** (a generalized UTXO model). 
+Unlike Ethereum or EVM chains where data is stored in account storage slots mapped behind smart contracts, CKB stores data in first-class Cells (a generalized UTXO model).
 - I learned that I can write arbitrary data directly into a cell's `outputData` field without needing to invoke or interact with an active smart contract. The cells themselves are the storage.
 
 ### 2. Space is Capital (1 CKB = 1 Byte)
-The constraint where **1 CKB token represents exactly 1 byte** of on-chain state storage was a major lightbulb moment for me.
-- To store my message, I had to ensure that the capacity of the cell was large enough to cover the size of its lock script, type script, and the message itself. 
+The constraint where 1 CKB token represents exactly 1 byte of on-chain state storage was a major lightbulb moment for me.
+- To store my message, I ensured that the capacity of the cell was large enough to cover the size of its lock script, type script, and the message itself.
 - If my transaction selected inputs with insufficient capacity to satisfy this minimum byte size constraint, it would fail. In this case, CKB's unique rent/space model binds the cost of state storage directly to the circulating token supply.
 
 ### 3. Local Chain Bootstrap via OffCKB
 Setting up `offckb` locally gave me a smooth developer experience. I bypassed the PowerShell script block by using the `offckb.cmd` wrapper and successfully spun up a local CKB node at port `28114`.
-- I had to feed the local devnet system scripts (like `secp256k1_blake160_sighash_all`) into my `@ckb-ccc/core` client configuration so that it knew how to construct and sign inputs. 
+- I imported the local devnet system scripts configuration (such as `secp256k1_blake160_sighash_all`) into my `@ckb-ccc/core` client setup to properly construct and sign transaction inputs.
 - It was fascinating to see how the client uses the same API structure to connect to `devnet` as it does to `testnet` or `mainnet`, simply by changing the underlying configuration endpoint and script registries.

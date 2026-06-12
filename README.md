@@ -22,71 +22,22 @@ I chose to complete this Store Data on Cell campaign using a custom automated No
 
 
 ### Step 1: Bootstrap the Local Devnet
-I did this following the first step of the documentation to spin up a local network. I ran `offckb.cmd node` in my workspace root. The CLI wrapper downloaded and installed the CKB binary version 0.205.0 and successfully launched my devnet node and miner, exposing the RPC proxy at `http://127.0.0.1:28114`.
-My Action: I started the local node in the background and verified it began producing blocks.
-
-
-
-
-
-
-
+I did this following the first step of the documentation to spin up a local network. I ran the command `offckb.cmd node` in the terminal from my workspace root. The local CKB devnet node and miner initialized successfully, establishing the RPC proxy at `http://127.0.0.1:28114` and generating new blocks in the background.
 
 ### Step 2: Retrieve Funded Developer Accounts
-I did this following the documentation's account setup guide. I ran `offckb.cmd accounts` to output the list of pre-funded accounts generated in the devnet genesis block.
-My Action: I extracted the private key for Account #1 (`0x9f315d5a9618a39fdc487c7a67a8581d40b045bd7a42d83648ca80ef3b2cb4a1`) and verified that it held a balance of `42,000,000 CKB`.
-
-
-
-
-
-
-
+I did this following the second step of the documentation. I executed the `offckb.cmd accounts` command to retrieve the pre-funded developer accounts list. From this list, I extracted the private key for Account #1 (`0x9f315d5a9618a39fdc487c7a67a8581d40b045bd7a42d83648ca80ef3b2cb4a1`) and verified that it held a balance of `42,000,000 CKB`.
 
 ### Step 3: Setup Node Client and Register Devnet Script Hashes
-I did this following the client setup guidelines in the documentation. I copied `system-scripts.json` containing the script configurations and loaded them into my test script.
-My Action: I instantiated the `ClientPublicTestnet` with my local proxy URL and configured the `SignerCkbPrivateKey` using the funded private key from Step 2.
-
-
-
-
-
-
-
+I did this following the third step of the documentation. I copied the devnet script hashes configuration file (`system-scripts.json`) and imported it into my Node.js scripts. I instantiated a CKB client using `ClientPublicTestnet` targeting my local node proxy, registered the required devnet system scripts (like `secp256k1_blake160_sighash_all`), and configured my private key signer using Account #1's key.
 
 ### Step 4: Encode the UTF-8 Message to Hexadecimal
-I did this following the message encoding instructions. I wrote a utility function `utf8ToHex` using the `TextEncoder` API to convert my plain text message into a hex payload.
-My Action: I encoded the message `"Hello CKB, Store Data on Cell Campaign Completed successfully!"` into the hexadecimal string: `0x48656c6c6f20434b422c2053746f72652044617461206f6e2043656c6c2043616d706169676e20436f6d706c65746564207375636365737366756c6c7921`.
-
-
-
-
-
-
-
-
-
+I did this following the fourth step of the documentation. I wrote a utility function `utf8ToHex` using the native `TextEncoder` API to convert my plain text message `"Hello CKB, Store Data on Cell Campaign Completed successfully!"` into a hexadecimal format, producing the string `0x48656c6c6f20434b422c2053746f72652044617461206f6e2043656c6c2043616d706169676e20436f6d706c65746564207375636365737366756c6c7921`.
 
 ### Step 5: Build the Transaction with Cell Data
-I did this following the transaction building specifications. I constructed the transaction output cell using `@ckb-ccc/core`.
-My Action: I set the lock script of my output cell to the signer's script, loaded the encoded hex message into the output data, completed the inputs based on my signer's capacity, and completed the fee estimation at a rate of 1000 shannons/KW.
-
-
-
-
-
-
+I did this following the fifth step of the documentation. I constructed the transaction to create a cell carrying my message. I set the transaction output cell's lock script to the signer's script, assigned the encoded message hex string to the cell's `outputData` field, automatically selected input cells to cover the needed capacity using `tx.completeInputsByCapacity`, and computed the transaction fee at a fee rate of 1000 shannons/KW.
 
 ### Step 6: Sign and Broadcast to the Network
-I did this following the signature and broadcast instructions. I used my local private key signer to sign the transaction payload and push it to the node.
-My Action: I executed `signer.sendTransaction(tx)`, generating the transaction hash `0x522bc4c6d7c83b173483f0008d246ccf76d6c25ac975b298f03d41b0aed18768`, and waited for confirmation.
-
-
-
-
-
-
+I did this following the sixth step of the documentation. I signed the constructed transaction with the private key of Account #1 and broadcast it to the network using the `signer.sendTransaction` method. The network processed the transaction, returned the transaction hash `0x522bc4c6d7c83b173483f0008d246ccf76d6c25ac975b298f03d41b0aed18768`, and I monitored it until it was fully committed on-chain.
 
 ### Step 7: Retrieve and Decode Live Cell Data
-I did this following the reading data instructions to query my saved cell data from the blockchain.
-My Action: I fetched the live cell at index `0x0` using the transaction hash from Step 6. I retrieved the raw hex payload `0x48656c...`, decoded it back to UTF-8 using `TextDecoder`, and confirmed that the retrieved message matched my original input string.
+I did this following the seventh step of the documentation. I queried the CKB devnet RPC for the live cell at index `0x0` using my transaction hash. I read the hexadecimal message stored in the cell, converted it back into a readable UTF-8 string using the `TextDecoder` API, and verified that it matched the original message.
